@@ -117,158 +117,55 @@
 // export default EarningsChart;
 
 
-import { Line } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { useEffect, useState, useRef } from "react";
+// import { Line } from "react-chartjs-2";
+// import {
+//   Chart as ChartJS,
+//   CategoryScale,
+//   LinearScale,
+//   PointElement,
+//   LineElement,
+//   Title,
+//   Tooltip,
+//   Legend,
+//   Filler,
+// } from "chart.js";
+import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { getMoneySymbol } from "../../../utils/additionalFunc";
 import { setLoading } from "../../../redux/slices/loadingSlice";
 import { getIncomeWeakData } from "../../../api/user.api";
 import { TrendingUp, Activity } from "lucide-react";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+// ChartJS.register(
+//   CategoryScale,
+//   LinearScale,
+//   PointElement,
+//   LineElement,
+//   Title,
+//   Tooltip,
+//   Legend,
+//   Filler
+// );
 
 const EarningsChart = () => {
   const dispatch = useDispatch();
-  const chartRef = useRef(null);
-
-  const [chartData, setChartData] = useState({
-    labels: [],
-    datasets: [],
-  });
+  const [weeklyData, setWeeklyData] = useState([]);
 
   useEffect(() => {
     const fetchIncomeWeekTotal = async () => {
       try {
         dispatch(setLoading(true));
         const response = await getIncomeWeakData();
-
         const rawData = response?.data || [];
-
-        // Reverse data if needed, assuming API returns newest first
-        // If API returns oldest first, remove .reverse()
-        // const processedData = [...rawData].reverse(); 
-        const processedData = rawData;
-
-        const labels = processedData.map((item) => {
-             const date = new Date(item.date);
-             return date.toLocaleDateString("en-US", { weekday: 'short' }); // e.g., "Mon"
-        });
-        
-        const dataPoints = processedData.map((item) =>
-          parseFloat(item.count.toFixed(2))
-        );
-
-        // Create gradient
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, "rgba(212, 175, 55, 0.5)"); // Gold with opacity
-        gradient.addColorStop(1, "rgba(212, 175, 55, 0)");   // Transparent
-
-        setChartData({
-          labels,
-          datasets: [
-            {
-              label: `Earnings (${getMoneySymbol()})`,
-              data: dataPoints,
-              borderColor: "#D4AF37", // Gold Border
-              backgroundColor: gradient,
-              borderWidth: 3,
-              tension: 0.4, // Smooth curves
-              fill: true,
-              pointBackgroundColor: "#000", // Black points
-              pointBorderColor: "#D4AF37", // Gold border for points
-              pointBorderWidth: 2,
-              pointHoverRadius: 8,
-              pointHoverBackgroundColor: "#D4AF37",
-              pointHoverBorderColor: "#fff",
-              pointRadius: 4,
-            },
-          ],
-        });
+        setWeeklyData(rawData);
       } catch (err) {
         console.error("Error fetching weekly income data:", err);
       } finally {
         dispatch(setLoading(false));
       }
     };
-
     fetchIncomeWeekTotal();
   }, [dispatch]);
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#0c0c0c',
-        titleColor: '#fff',
-        bodyColor: '#D4AF37',
-        borderColor: 'rgba(212, 175, 55, 0.3)',
-        borderWidth: 1,
-        padding: 12,
-        titleFont: { family: 'Rajdhani', size: 14, weight: 'bold' },
-        bodyFont: { family: 'monospace', size: 12 },
-        displayColors: false,
-        callbacks: {
-          label: function(context) {
-            return getMoneySymbol() + ' ' + context.parsed.y.toFixed(2);
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        grid: { 
-            color: "rgba(255, 255, 255, 0.05)",
-            drawBorder: false
-        },
-        ticks: { 
-            color: "#6b7280",
-            font: { family: 'Rajdhani', size: 11, weight: '600' }
-        },
-      },
-      y: {
-        grid: { 
-            color: "rgba(255, 255, 255, 0.05)",
-            borderDash: [5, 5]
-        },
-        ticks: {
-          color: "#6b7280",
-          font: { family: 'monospace', size: 10 },
-          callback: function (value) {
-            return getMoneySymbol() + value;
-          },
-        },
-        border: { display: false }
-      },
-    },
-    interaction: {
-      mode: 'index',
-      intersect: false,
-    },
-  };
 
   return (
     <div className="bg-[#0c0c0c] border border-white/5 rounded-[2rem] p-8 h-[400px] shadow-2xl relative overflow-hidden group">
@@ -299,8 +196,35 @@ const EarningsChart = () => {
 
       {/* Chart Container */}
       <div className="relative h-[280px] w-full z-10">
-        {chartData.labels.length > 0 ? (
-           <Line data={chartData} options={options} ref={chartRef} />
+        {weeklyData.length > 0 ? (
+          <div className="space-y-3">
+            {weeklyData.map((item, index) => {
+              const date = new Date(item.date);
+              const dayName = date.toLocaleDateString("en-US", { weekday: 'short' });
+              const amount = parseFloat(item.count.toFixed(2));
+              const maxAmount = Math.max(...weeklyData.map(d => d.count));
+              const percentage = (amount / maxAmount) * 100;
+              
+              return (
+                <div key={index} className="flex items-center gap-3">
+                  <span className="text-xs text-gray-500 font-bold w-10">{dayName}</span>
+                  <div className="flex-1 bg-[#1a1a1a] rounded-full h-8 overflow-hidden border border-white/5">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#B8860B] to-[#FFD700] flex items-center justify-end px-3 transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
+                    >
+                      {percentage > 20 && (
+                        <span className="text-xs font-bold text-black">{getMoneySymbol()}{amount}</span>
+                      )}
+                    </div>
+                  </div>
+                  {percentage <= 20 && (
+                    <span className="text-xs font-bold text-[#FFD700] w-16">{getMoneySymbol()}{amount}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         ) : (
            <div className="h-full w-full flex flex-col items-center justify-center text-gray-600">
               <Activity className="animate-pulse mb-2 opacity-20" size={48} />
